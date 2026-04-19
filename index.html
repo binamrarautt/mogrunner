@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>run tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 20px; text-transform: lowercase; }
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  h2 { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
+  .subtitle { font-size: 14px; color: #666; margin-bottom: 24px; }
+  .card { background: white; border-radius: 12px; border: 0.5px solid #e0e0e0; padding: 20px; margin-bottom: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+  .metric { background: #f8f8f8; border-radius: 8px; padding: 12px; text-align: center; }
+  .metric-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 500; }
+  .metric-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+  label { font-size: 13px; color: #555; display: block; margin-bottom: 6px; margin-top: 14px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; border: 0.5px solid #ddd; border-radius: 8px; font-size: 14px; background: white; color: #1a1a1a; margin-bottom: 4px; }
+  textarea { resize: vertical; min-height: 60px; }
+  .btn-group { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+  .sel-btn { padding: 7px 13px; border: 0.5px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+  .sel-btn.selected { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+  .sel-btn.pain-selected { background: #e24b4a; color: white; border-color: #e24b4a; }
+  .submit-btn { width: 100%; padding: 10px; background: #1a1a1a; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; margin-top: 16px; }
+  .submit-btn:hover { background: #333; }
+  .run-item { padding: 12px 0; border-bottom: 0.5px solid #f0f0f0; }
+  .run-item:last-child { border-bottom: none; }
+  .run-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .run-date { font-size: 12px; color: #888; }
+  .run-main { font-size: 14px; font-weight: 500; margin: 2px 0; }
+  .run-meta { font-size: 12px; color: #666; }
+  .run-pain { font-size: 12px; color: #e24b4a; margin-top: 2px; }
+  .run-notes { font-size: 12px; color: #888; margin-top: 2px; font-style: italic; }
+  .delete-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 14px; padding: 2px 6px; flex-shrink: 0; }
+  .delete-btn:hover { color: #e24b4a; }
+  .week-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .week-nav button { background: none; border: 0.5px solid #ddd; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .week-label { font-size: 14px; font-weight: 500; }
+  .bar-chart { margin-top: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .bar-day { font-size: 11px; color: #888; width: 28px; }
+  .bar-track { flex: 1; background: #f0f0f0; border-radius: 4px; height: 16px; }
+  .bar-fill { background: #1a1a1a; border-radius: 4px; height: 100%; transition: width 0.3s; }
+  .bar-label { font-size: 11px; color: #888; width: 44px; text-align: right; }
+  .empty-state { text-align: center; color: #aaa; font-size: 14px; padding: 24px 0; }
+  .tab-nav { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab-btn { padding: 8px 16px; border: 0.5px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; }
+  .tab-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .pain-scale { display: none; margin-top: 8px; }
+  .pain-scale.visible { display: block !important; }
+  .week-summary { background: #f8f8f8; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.7; color: #444; }
+  .week-summary strong { color: #1a1a1a; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<h1>run tracker</h1>
+<p class="subtitle">marathon training log</p>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('log', event)">log run</button>
+  <button class="tab-btn" onclick="showTab('week', event)">this week</button>
+  <button class="tab-btn" onclick="showTab('history', event)">all runs</button>
+</div>
+
+<div id="tab-log" class="section active">
+  <div class="card">
+    <h2>lets track ur slow ass</h2>
+    <div class="grid-2">
+      <div>
+        <label>date</label>
+        <input type="date" id="run-date">
+      </div>
+      <div>
+        <label>run type</label>
+        <select id="run-type">
+          <option value="recovery">recovery</option>
+          <option value="easy">easy</option>
+          <option value="tempo">tempo</option>
+          <option value="interval">interval</option>
+          <option value="long run">long run</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>distance (miles)</label>
+        <input type="number" id="run-distance" placeholder="0.0" step="0.1" min="0" oninput="updatePace()">
+      </div>
+      <div>
+        <label>avg pace</label>
+        <div id="pace-display" style="padding:8px 10px;border:0.5px solid #ddd;border-radius:8px;font-size:14px;color:#888;background:#f8f8f8;min-height:38px;display:flex;align-items:center;">--:-- /mile</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <label>hours</label>
+        <input type="number" id="run-hours" placeholder="0" min="0" oninput="updatePace()">
+      </div>
+      <div>
+        <label>minutes</label>
+        <input type="number" id="run-minutes" placeholder="0" min="0" max="59" oninput="updatePace()">
+      </div>
+    </div>
+
+    <label>u okay babe? (run effort)</label>
+    <div class="btn-group">
+      <button class="sel-btn" onclick="selectEffort(1)" data-effort="1">felt good</button>
+      <button class="sel-btn" onclick="selectEffort(2)" data-effort="2">mid</button>
+      <button class="sel-btn" onclick="selectEffort(3)" data-effort="3">survived</button>
+      <button class="sel-btn" onclick="selectEffort(4)" data-effort="4">i died</button>
+    </div>
+
+    <label>how did you feel?</label>
+    <div class="btn-group">
+      <button class="sel-btn" onclick="selectFeel(1)" data-feel="1">im crying rn will answer later</button>
+      <button class="sel-btn" onclick="selectFeel(2)" data-feel="2">i poo'd myself</button>
+      <button class="sel-btn" onclick="selectFeel(3)" data-feel="3">not bad</button>
+      <button class="sel-btn" onclick="selectFeel(4)" data-feel="4">good</button>
+      <button class="sel-btn" onclick="selectFeel(5)" data-feel="5">is this heaven?</button>
+    </div>
+
+    <label>Did anything hurt today babe?</label>
+    <div class="btn-group">
+      <button class="sel-btn" onclick="togglePain('achilles')" data-pain="achilles">achilles</button>
+      <button class="sel-btn" onclick="togglePain('knee')" data-pain="knee">knee</button>
+      <button class="sel-btn" onclick="togglePain('feet')" data-pain="feet">feet</button>
+      <button class="sel-btn" onclick="togglePain('hip')" data-pain="hip">hip</button>
+      <button class="sel-btn" onclick="togglePain('back')" data-pain="back">back</button>
+      <button class="sel-btn" onclick="togglePain('none')" data-pain="none">all good</button>
+    </div>
+
+    <div class="pain-scale" id="pain-scale-section">
+      <label>pain level? (1-100)</label>
+      <input type="number" id="pain-level-input" placeholder="0" min="1" max="100" oninput="selectPainLevel(this.value)">
+    </div>
+
+    <label>notes</label>
+    <textarea id="run-notes" placeholder="what do u want to say? talk yo shit"></textarea>
+    <button class="submit-btn" onclick="logRun()">save run</button>
+  </div>
+</div>
+
+<div id="tab-week" class="section">
+  <div class="card">
+    <div class="week-nav">
+      <button onclick="changeWeek(-1)">prev</button>
+      <span class="week-label" id="week-label"></span>
+      <button onclick="changeWeek(1)">next</button>
+    </div>
+    <div class="grid-4">
+      <div class="metric"><div class="metric-label">miles</div><div class="metric-value" id="wk-miles">0</div></div>
+      <div class="metric"><div class="metric-label">runs</div><div class="metric-value" id="wk-runs">0</div></div>
+      <div class="metric"><div class="metric-label">minutes</div><div class="metric-value" id="wk-mins">0</div></div>
+      <div class="metric"><div class="metric-label">pain reports</div><div class="metric-value" id="wk-pain-count">0</div></div>
+    </div>
+    <div class="grid-3">
+      <div class="metric"><div class="metric-label">avg effort</div><div class="metric-value" id="wk-effort">-</div><div class="metric-sub" id="wk-effort-label"></div></div>
+      <div class="metric"><div class="metric-label">avg feel</div><div class="metric-value" id="wk-feel">-</div><div class="metric-sub" id="wk-feel-label"></div></div>
+      <div class="metric"><div class="metric-label">avg pain</div><div class="metric-value" id="wk-pain">-</div><div class="metric-sub" id="wk-pain-label"></div></div>
+    </div>
+    <div class="week-summary" id="week-summary"></div>
+    <div class="bar-chart" id="week-bars"></div>
+  </div>
+  <div class="card">
+    <h2>runs this week</h2>
+    <div id="week-runs-list"></div>
+  </div>
+</div>
+
+<div id="tab-history" class="section">
+  <div class="card">
+    <h2>all runs</h2>
+    <div id="all-runs-list"></div>
+  </div>
+</div>
+
+<script>
+let runs = JSON.parse(localStorage.getItem('marathon_runs_v2') || '[]');
+let selectedEffort = null;
+let selectedFeel = null;
+let selectedPainAreas = [];
+let selectedPainLevel = null;
+let currentWeekOffset = 0;
+
+const effortLabels = {1:'felt good',2:'mid',3:'survived',4:'i died'};
+const feelLabels = {1:"im crying rn will answer later",2:"i poo'd myself",3:'not bad',4:'good',5:'is this heaven?'};
+const painLabels = {low:'Barely there',mid:'Manageable',high:'Concerning',vhigh:'Stop running'}; 
+
+function painLabel(val) {
+  if (!val) return '';
+  if (val <= 20) return 'barely there';
+  if (val <= 40) return 'manageable';
+  if (val <= 70) return 'concerning';
+  return 'stop running';
+}
+
+function updatePace() {
+  const distance = parseFloat(document.getElementById('run-distance').value);
+  const hours = parseFloat(document.getElementById('run-hours').value) || 0;
+  const minutes = parseFloat(document.getElementById('run-minutes').value) || 0;
+  const totalMins = hours * 60 + minutes;
+  const display = document.getElementById('pace-display');
+  if (!distance || distance <= 0 || totalMins <= 0) {
+    display.textContent = '--:-- /mile';
+    display.style.color = '#888';
+    return;
+  }
+  const paceDecimal = totalMins / distance;
+  const mins = Math.floor(paceDecimal);
+  const secs = Math.round((paceDecimal - mins) * 60);
+  const secsStr = secs < 10 ? '0' + secs : '' + secs;
+  display.textContent = mins + ':' + secsStr + ' /mile';
+  display.style.color = '#1a1a1a';
+}
+
+function init() {
+  document.getElementById('run-date').value = new Date().toISOString().split('T')[0];
+  renderAll();
+}
+
+function showTab(tab, e) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (e && e.target) e.target.classList.add('active');
+  if (tab === 'week') renderWeek();
+  if (tab === 'history') renderHistory();
+}
+
+function selectEffort(val) {
+  selectedEffort = val;
+  document.querySelectorAll('[data-effort]').forEach(b => b.classList.remove('selected'));
+  document.querySelector('[data-effort="'+val+'"]').classList.add('selected');
+}
+
+function selectFeel(val) {
+  selectedFeel = val;
+  document.querySelectorAll('[data-feel]').forEach(b => b.classList.remove('selected'));
+  document.querySelector('[data-feel="'+val+'"]').classList.add('selected');
+}
+
+function togglePain(area) {
+  if (area === 'none') {
+    selectedPainAreas = [];
+    document.querySelectorAll('[data-pain]').forEach(b => b.classList.remove('pain-selected','selected'));
+    document.querySelector('[data-pain="none"]').classList.add('selected');
+    document.getElementById('pain-scale-section').classList.remove('visible');
+    selectedPainLevel = null;
+    return;
+  }
+  document.querySelector('[data-pain="none"]').classList.remove('selected');
+  const idx = selectedPainAreas.indexOf(area);
+  const btn = document.querySelector('[data-pain="'+area+'"]');
+  if (idx > -1) { selectedPainAreas.splice(idx,1); btn.classList.remove('pain-selected'); }
+  else { selectedPainAreas.push(area); btn.classList.add('pain-selected'); }
+  if (selectedPainAreas.length > 0) {
+    document.getElementById('pain-scale-section').classList.add('visible');
+  } else {
+    document.getElementById('pain-scale-section').classList.remove('visible');
+    selectedPainLevel = null;
+    const painInput = document.getElementById('pain-level-input');
+    if (painInput) painInput.value = '';
+  }
+}
+
+function selectPainLevel(val) {
+  selectedPainLevel = parseInt(val) || null;
+}
+
+function logRun() {
+  const date = document.getElementById('run-date').value;
+  const distance = parseFloat(document.getElementById('run-distance').value);
+  const hours = parseFloat(document.getElementById('run-hours').value) || 0;
+  const minutes = parseFloat(document.getElementById('run-minutes').value) || 0;
+  const duration = Math.round(hours * 60 + minutes);
+  const type = document.getElementById('run-type').value;
+  const notes = document.getElementById('run-notes').value;
+  if (!date || !distance || distance <= 0) { alert('please enter a date and distance.'); return; }
+  runs.push({ id: Date.now(), date, distance, duration, type, effort: selectedEffort, feel: selectedFeel, painAreas: [...selectedPainAreas], painLevel: selectedPainLevel, notes });
+  runs.sort((a,b) => b.date.localeCompare(a.date));
+  save();
+  resetForm();
+  alert('run saved!');
+  renderAll();
+}
+
+function resetForm() {
+  document.getElementById('run-distance').value = '';
+  document.getElementById('run-hours').value = '';
+  document.getElementById('run-minutes').value = '';
+  document.getElementById('pace-display').textContent = '--:-- /mile';
+  document.getElementById('pace-display').style.color = '#888';
+  document.getElementById('run-notes').value = '';
+  selectedEffort = null; selectedFeel = null; selectedPainAreas = []; selectedPainLevel = null;
+  document.querySelectorAll('.sel-btn').forEach(b => b.classList.remove('selected','pain-selected'));
+  document.getElementById('pain-scale-section').classList.remove('visible');
+  const painInput = document.getElementById('pain-level-input');
+  if (painInput) painInput.value = '';
+}
+
+function save() { localStorage.setItem('marathon_runs_v2', JSON.stringify(runs)); }
+
+function avgOf(arr) {
+  if (!arr.length) return null;
+  return arr.reduce((s,v) => s+v, 0) / arr.length;
+}
+
+function fmtPace(duration, distance) {
+  if (!duration || !distance) return '';
+  const paceDecimal = duration / distance;
+  const mins = Math.floor(paceDecimal);
+  const secs = Math.round((paceDecimal - mins) * 60);
+  return mins + ':' + (secs < 10 ? '0' : '') + secs + ' /mi';
+}
+
+function getWeekDates(offset) {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day-1) + offset*7);
+  return Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d.toISOString().split('T')[0]; });
+}
+
+function changeWeek(dir) { currentWeekOffset += dir; renderWeek(); }
+
+function renderWeek() {
+  const dates = getWeekDates(currentWeekOffset);
+  const fmt = d => new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  document.getElementById('week-label').textContent = fmt(dates[0]) + ' - ' + fmt(dates[6]);
+
+  const weekRuns = runs.filter(r => dates.includes(r.date));
+  const totalMiles = weekRuns.reduce((s,r) => s+r.distance, 0);
+  const totalMins = weekRuns.reduce((s,r) => s+(r.duration||0), 0);
+  const painRuns = weekRuns.filter(r => r.painAreas && r.painAreas.length > 0);
+
+  const effortAvg = avgOf(weekRuns.filter(r=>r.effort).map(r=>r.effort));
+  const feelAvg = avgOf(weekRuns.filter(r=>r.feel).map(r=>r.feel));
+  const painAvg = avgOf(weekRuns.filter(r=>r.painLevel).map(r=>r.painLevel));
+
+  document.getElementById('wk-miles').textContent = totalMiles.toFixed(1);
+  document.getElementById('wk-runs').textContent = weekRuns.length;
+  document.getElementById('wk-mins').textContent = totalMins;
+  document.getElementById('wk-pain-count').textContent = painRuns.length;
+  document.getElementById('wk-effort').textContent = effortAvg ? effortAvg.toFixed(1) : '-';
+  document.getElementById('wk-effort-label').textContent = effortAvg ? effortLabels[Math.round(effortAvg)] || '' : '';
+  document.getElementById('wk-feel').textContent = feelAvg ? feelAvg.toFixed(1) : '-';
+  document.getElementById('wk-feel-label').textContent = feelAvg ? feelLabels[Math.round(feelAvg)] || '' : '';
+  document.getElementById('wk-pain').textContent = painAvg ? Math.round(painAvg) : '-';
+  document.getElementById('wk-pain-label').textContent = painAvg ? painLabel(painAvg) : '';
+
+  let summary = '';
+  if (weekRuns.length === 0) {
+    summary = 'no runs logged this week yet.';
+  } else {
+    const parts = [];
+    parts.push('<strong>' + weekRuns.length + ' run' + (weekRuns.length > 1 ? 's' : '') + '</strong> totaling <strong>' + totalMiles.toFixed(1) + ' miles</strong>.');
+    if (effortAvg) parts.push('average effort this week: <strong>' + effortLabels[Math.round(effortAvg)] + '</strong>.');
+    if (feelAvg) parts.push('you generally felt <strong>' + feelLabels[Math.round(feelAvg)].toLowerCase() + '</strong>.');
+    if (painRuns.length === 0) {
+      parts.push('no pain reported. body holding up well.');
+    } else {
+      const allAreas = [...new Set(painRuns.flatMap(r => r.painAreas))];
+      parts.push('pain flagged in <strong>' + allAreas.join(', ') + '</strong> on ' + painRuns.length + ' run' + (painRuns.length > 1 ? 's' : '') + '. keep an eye on it.');
+    }
+    summary = parts.join(' ');
+  }
+  document.getElementById('week-summary').innerHTML = summary;
+
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const maxMiles = Math.max(...dates.map(d => weekRuns.filter(x=>x.date===d).reduce((s,x)=>s+x.distance,0)), 1);
+  document.getElementById('week-bars').innerHTML = dates.map((d,i) => {
+    const miles = weekRuns.filter(r=>r.date===d).reduce((s,r)=>s+r.distance,0);
+    const pct = Math.round((miles/maxMiles)*100);
+    return '<div class="bar-row"><span class="bar-day">'+days[i]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div><span class="bar-label">'+(miles>0?miles.toFixed(1)+'mi':'')+'</span></div>';
+  }).join('');
+
+  document.getElementById('week-runs-list').innerHTML = weekRuns.length ? weekRuns.map(r=>runItem(r)).join('') : '<div class="empty-state">no runs this week</div>';
+}
+
+function runItem(r) {
+  const pace = fmtPace(r.duration, r.distance);
+  const effortStr = r.effort ? 'effort: '+effortLabels[r.effort] : '';
+  const feelStr = r.feel ? 'feel: '+feelLabels[r.feel] : '';
+  const meta = [effortStr, feelStr].filter(Boolean).join(' &middot; ');
+  const painStr = r.painAreas && r.painAreas.length ? r.painAreas.join(', ')+(r.painLevel?' ('+r.painLevel+'/100 - '+painLabel(r.painLevel)+')':'') : '';
+  return '<div class="run-item"><div class="run-header"><div><div class="run-date">'+r.date+(pace?' &middot; '+pace:'')+'</div><div class="run-main">'+r.distance.toFixed(1)+' miles &middot; '+r.type+'</div>'+(meta?'<div class="run-meta">'+meta+'</div>':'')+(painStr?'<div class="run-pain">pain: '+painStr+'</div>':'')+(r.notes?'<div class="run-notes">'+r.notes+'</div>':'')+'</div><button class="delete-btn" data-id="'+r.id+'">delete</button></div></div>';
+}
+
+function renderHistory() {
+  document.getElementById('all-runs-list').innerHTML = runs.length ? runs.map(r=>runItem(r)).join('') : '<div class="empty-state">no runs logged yet.</div>';
+}
+
+function renderAll() { renderWeek(); renderHistory(); }
+
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('delete-btn')) {
+    const id = parseInt(e.target.getAttribute('data-id'));
+    const btn = e.target;
+    if (btn.getAttribute('data-confirm') === 'yes') {
+      runs = runs.filter(r => r.id !== id);
+      save();
+      renderWeek();
+      renderHistory();
+    } else {
+      btn.setAttribute('data-confirm', 'yes');
+      btn.textContent = 'u sure babe?';
+      btn.style.color = '#e24b4a';
+      setTimeout(() => {
+        btn.setAttribute('data-confirm', 'no');
+        btn.textContent = 'delete';
+        btn.style.color = '';
+      }, 3000);
+    }
+  }
+});
+
+init();
+</script>
+</body>
+</html>
